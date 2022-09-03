@@ -61,14 +61,17 @@ pub struct WaveFunctionCollapse {
 }
 
 impl WaveFunctionCollapse {
-    pub fn generate_next(&self) {
-        for (index, cell) in self.cells.iter().enumerate() {
-            if cell.cell_type.is_none() {
-                let neighbours = self.get_neighbours(index);
-                for i in neighbours {
-                    let cell = &self.cells[i];
-                    println!("{cell:?}");
-                }
+    pub fn generate_next(&mut self) {
+        let mut rng = global_rng(); // TODO: use seeded rng
+        let cell = self.cells.iter_mut().filter(|cell| cell.cell_type.is_none()).choose(&mut rng);
+        match cell {
+            None => {
+                // There are no cells left to generate
+                return;
+            }
+            Some(cell) => {
+                let options = vec![CellType::Vertical, CellType::Horizontal, CellType::Empty];
+                cell.cell_type = Some(options.choose(&mut rng).unwrap().clone());
             }
         }
     }
