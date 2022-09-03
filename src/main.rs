@@ -15,6 +15,15 @@ impl State {
 }
 
 impl geng::State for State {
+    fn handle_event(&mut self, event: geng::Event) {
+        if let geng::Event::KeyDown {
+            key: geng::Key::Space,
+        } = event
+        {
+            self.grid.generate_next();
+        }
+    }
+
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         ugli::clear(framebuffer, Some(Color::BLACK), None);
 
@@ -171,8 +180,7 @@ fn main() {
 
     let geng = Geng::new("Wave Function Collapse");
 
-    let mut state = State::new(&geng);
-    state.grid.generate_next();
+    let state = State::new(&geng);
 
     geng::run(&geng, state)
 }
