@@ -103,15 +103,56 @@ impl WaveFunctionCollapse {
             .choose(&mut rng);
         match cell {
             None => {
-                // There are no cells left to generate
+                println!("There are no more cells to generate");
             }
             Some((index, cell)) => {
-                let options = vec![CellType::Vertical, CellType::Horizontal, CellType::Empty];
-                // TODO: remove 'impossible' options
-                let cell_type = *options.choose(&mut rng).unwrap();
+                let mut possible_options = HashMap::new();
+                possible_options.insert("Vertical", CellType::Vertical);
+                possible_options.insert("Horizontal", CellType::Horizontal);
+                possible_options.insert("Empty", CellType::Empty);
+                let (cell_x, cell_y) = self.index_to_position(index);
+
+                for neighbour_index in self.get_neighbours(index) {
+                    let neighbour = self.cells.get(neighbour_index).unwrap();
+                    let (neighbour_x, neighbour_y) = self.index_to_position(neighbour_index);
+
+                    match neighbour.cell_type {
+                        Some(cell_type) => {
+                            match cell_type {
+                                CellType::Vertical => {
+                                    possible_options.remove("Horizontal");
+
+                                    // Check if vertical tile is only on the top or bottom
+                                    if neighbour_x as isize + 1 == cell_x as isize
+                                        || neighbour_x as isize - 1 == cell_x as isize
+                                    {
+                                        possible_options.remove("Vertical");
+                                    }
+                                }
+                                CellType::Horizontal => {
+                                    possible_options.remove("Vertical");
+
+                                    // // Check if horizontal is only on the left or right
+                                    if neighbour_y as isize + 1 == cell_y as isize
+                                        || neighbour_y as isize - 1 == cell_y as isize
+                                    {
+                                        possible_options.remove("Horizontal");
+                                    }
+                                }
+                                CellType::Empty => (),
+                            }
+
+                            println!("Possible options: {:?}", possible_options);
+                        }
+                        None => (),
+                    }
+                }
+
+                let cell_type = possible_options.into_iter().choose(&mut rng).unwrap();
 
                 let cell = self.cells.get_mut(index).unwrap();
-                cell.cell_type = Some(cell_type);
+                cell.cell_type = Some(cell_type.1);
+                println!("Type of self to put: {:?}", cell.cell_type.unwrap());
             }
         }
     }
@@ -148,7 +189,7 @@ impl WaveFunctionCollapse {
         [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
             .into_iter()
             .filter(|(x, y)| {
-                *x > 0 && *x < self.width as isize && *y >= 0 && *y < self.height as isize
+                *x >= 0 && *x < self.width as isize && *y >= 0 && *y < self.height as isize
             })
             .map(|(x, y)| self.position_to_index(dbg!(x) as usize, dbg!(dbg!(y) as usize)))
             .collect()
@@ -169,7 +210,7 @@ pub struct Cell {
     cell_type: Option<CellType>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CellType {
     Vertical,
     Horizontal,
