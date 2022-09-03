@@ -97,17 +97,21 @@ impl WaveFunctionCollapse {
         let mut rng = global_rng(); // TODO: use seeded rng
         let cell = self
             .cells
-            .iter_mut()
-            .filter(|cell| cell.cell_type.is_none())
+            .iter()
+            .enumerate()
+            .filter(|(_, cell)| cell.cell_type.is_none())
             .choose(&mut rng);
         match cell {
             None => {
                 // There are no cells left to generate
-                return;
             }
-            Some(cell) => {
+            Some((index, cell)) => {
                 let options = vec![CellType::Vertical, CellType::Horizontal, CellType::Empty];
-                cell.cell_type = Some(options.choose(&mut rng).unwrap().clone());
+                // TODO: remove 'impossible' options
+                let cell_type = *options.choose(&mut rng).unwrap();
+
+                let cell = self.cells.get_mut(index).unwrap();
+                cell.cell_type = Some(cell_type);
             }
         }
     }
@@ -141,15 +145,13 @@ impl WaveFunctionCollapse {
         let x = x as isize;
         let y = y as isize;
 
-        let neighbours = [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+        [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
             .into_iter()
             .filter(|(x, y)| {
                 *x > 0 && *x < self.width as isize && *y >= 0 && *y < self.height as isize
             })
             .map(|(x, y)| self.position_to_index(dbg!(x) as usize, dbg!(dbg!(y) as usize)))
-            .collect();
-
-        neighbours
+            .collect()
     }
 
     pub fn index_to_position(&self, index: usize) -> (usize, usize) {
