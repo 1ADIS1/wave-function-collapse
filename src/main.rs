@@ -51,6 +51,29 @@ impl geng::State for State {
             )
             .draw_2d(&self.geng, framebuffer, &camera);
         }
+
+        for (cell, x, y) in self.grid.cells() {
+            let cell_type = match cell.cell_type {
+                None => continue,
+                Some(cell_type) => cell_type,
+            };
+            let pos = vec2(x, y).map(|x| x as f32) * TILE_SIZE;
+            let aabb = AABB::point(pos).extend_positive(TILE_SIZE);
+            draw_2d::Quad::new(aabb, Color::GRAY).draw_2d(&self.geng, framebuffer, &camera);
+            match cell_type {
+                CellType::Vertical => draw_2d::Quad::new(
+                    aabb.extend_symmetric(vec2(-TILE_SIZE.x / 3.0, 0.0)),
+                    Color::BLUE,
+                )
+                .draw_2d(&self.geng, framebuffer, &camera),
+                CellType::Horizontal => draw_2d::Quad::new(
+                    aabb.extend_symmetric(vec2(0.0, -TILE_SIZE.y / 3.0)),
+                    Color::BLUE,
+                )
+                .draw_2d(&self.geng, framebuffer, &camera),
+                CellType::Empty => {}
+            }
+        }
     }
 }
 
@@ -63,7 +86,11 @@ pub struct WaveFunctionCollapse {
 impl WaveFunctionCollapse {
     pub fn generate_next(&mut self) {
         let mut rng = global_rng(); // TODO: use seeded rng
-        let cell = self.cells.iter_mut().filter(|cell| cell.cell_type.is_none()).choose(&mut rng);
+        let cell = self
+            .cells
+            .iter_mut()
+            .filter(|cell| cell.cell_type.is_none())
+            .choose(&mut rng);
         match cell {
             None => {
                 // There are no cells left to generate
@@ -86,6 +113,13 @@ impl WaveFunctionCollapse {
         }
     }
 
+    pub fn cells(&self) -> impl Iterator<Item = (&Cell, usize, usize)> {
+        self.cells.iter().enumerate().map(|(index, cell)| {
+            let (x, y) = self.index_to_position(index);
+            (cell, x, y)
+        })
+    }
+
     pub fn get_cell(&self, x: usize, y: usize) -> Option<&Cell> {
         let index = self.position_to_index(x, y);
         self.cells.get(index)
@@ -100,7 +134,9 @@ impl WaveFunctionCollapse {
 
         let neighbours = [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
             .into_iter()
-            .filter(|(x, y)| *x > 0 && *x < self.width as isize && *y >= 0 && *y < self.height as isize)
+            .filter(|(x, y)| {
+                *x > 0 && *x < self.width as isize && *y >= 0 && *y < self.height as isize
+            })
             .map(|(x, y)| self.position_to_index(dbg!(x) as usize, dbg!(dbg!(y) as usize)))
             .collect();
 
