@@ -2,14 +2,14 @@ use geng::{prelude::*, Draw2d};
 
 struct State {
     geng: Geng,
-    grid: Grid,
+    grid: WaveFunctionCollapse,
 }
 
 impl State {
     pub fn new(geng: &Geng) -> Self {
         Self {
             geng: geng.clone(),
-            grid: Grid::new(10, 10),
+            grid: WaveFunctionCollapse::new(10, 10),
         }
     }
 }
@@ -54,13 +54,27 @@ impl geng::State for State {
     }
 }
 
-pub struct Grid {
+pub struct WaveFunctionCollapse {
     cells: Vec<Cell>,
     width: usize,
     height: usize,
 }
 
-impl Grid {
+impl WaveFunctionCollapse {
+    pub fn generate_next(&self) {
+        for (index, cell) in self.cells.iter().enumerate() {
+            if cell.cell_type.is_none() {
+                let neighbours = self.get_neighbours(index);
+                for i in neighbours {
+                    let cell = &self.cells[i];
+                    println!("{cell:?}");
+                }
+            }
+        }
+    }
+}
+
+impl WaveFunctionCollapse {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             cells: vec![Cell { cell_type: None }; width * height],
@@ -70,8 +84,32 @@ impl Grid {
     }
 
     pub fn get_cell(&self, x: usize, y: usize) -> Option<&Cell> {
-        let index = x + y * self.width;
+        let index = self.position_to_index(x, y);
         self.cells.get(index)
+    }
+
+    /// Takes index of current cell and returns its neighbours.
+    /// TODO: avoid vector usage
+    pub fn get_neighbours(&self, index: usize) -> Vec<usize> {
+        let (x, y) = self.index_to_position(index);
+        let x = x as isize;
+        let y = y as isize;
+
+        let neighbours = [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+            .into_iter()
+            .filter(|(x, y)| *x > 0 && *x < self.width as isize && *y >= 0 && *y < self.height as isize)
+            .map(|(x, y)| self.position_to_index(dbg!(x) as usize, dbg!(dbg!(y) as usize)))
+            .collect();
+
+        neighbours
+    }
+
+    pub fn index_to_position(&self, index: usize) -> (usize, usize) {
+        (index % self.width, index / self.width)
+    }
+
+    pub fn position_to_index(&self, x: usize, y: usize) -> usize {
+        x + y * self.width
     }
 }
 
@@ -94,7 +132,8 @@ fn main() {
 
     let geng = Geng::new("Wave Function Collapse");
 
-    let state = State::new(&geng);
+    let mut state = State::new(&geng);
+    state.grid.generate_next();
 
     geng::run(&geng, state)
 }
